@@ -2,7 +2,7 @@
 
 大きな器の測り方 — 確定境界論の追記
 
-> **English summary:** CM-D-Boundary (CMD-B) extends Deterministic Boundary Theory (D-Boundary) to vessels whose inference size is too large to see with the standard ladder — it checks the max. Small vessels are measured as before, by splitting. Large vessels are measured differently: first infer the resources the measurement itself will need (memory is computable from the model's KV-cache formula; time is inferred probabilistically from published tokens/second, because those values fluctuate by serving route). Then climb by doubling-and-cubing — skipping the intermediate doublings so no tokens or compute are wasted — until overflow appears, and descend from the overflow point by splitting, the same direction already verified in practice with Gemma. Settled scales are *defined ranks*, not true capacities: Gemma is rank 1/8, the standard group is rank 1/1 (Qwen included with its throw tuning). Above the standard, stages are named by level: 8/1 is Level +1, splitting it gives +0.5 and +0.25, the next doubled-and-cubed stage (4096/1) is Level +2, and overflow there reads +1.5. Because splitting never reaches zero, a reading that has crossed a threshold never falls below it. Prediction recorded by the author: a Level +3 AI may exist; a Level +4 AI does not — because inference runs as a loop of thought-stages, each stage has a minimum size that grows with the vessel's scale, and at +3 even one minimum stage makes the loop too large to turn.
+> **English summary:** CM-D-Boundary (CMD-B) extends Deterministic Boundary Theory (D-Boundary) to vessels whose inference size is too large to see with the standard ladder — it checks the max. Small vessels are measured as before, by splitting. Large vessels are measured differently: first infer the resources the measurement itself will need (memory is computable from the model's KV-cache formula; time is inferred probabilistically from published tokens/second, because those values fluctuate by serving route). Then climb by doubling-and-cubing — skipping the intermediate doublings so no tokens or compute are wasted — until overflow appears, and descend from the overflow point by splitting, the same direction already verified in practice with Gemma. Settled scales are *defined ranks*, not true capacities: Gemma is rank 1/8, the standard group is rank 1/1 (Qwen included with its throw tuning). Above the standard, stages are named by level: 8/1 is Level +1, splitting it gives +0.5 and +0.25, the next doubled-and-cubed stage (4096/1) is Level +2, and overflow there reads +1.5. Because splitting never reaches zero, a reading that has crossed a threshold never falls below it. Prediction recorded by the author: a Level +3 AI may exist (one whose reading falls in the +3 band); a Level +4 AI does not — because inference runs as a loop of thought-stages, each stage has a minimum size that grows with the vessel's scale, and at the top of the +3 band even one minimum stage makes the loop too large to turn.
 
 # 大きな器の測り方
 
@@ -25,6 +25,7 @@
 基準を倍にして、その数を3つ掛ける（階乗形）。クリアできたら、また倍にして3つ掛ける。
 
 - 梯子の形：1×2 → 2×2×2 → 8×2 → 16×16×16 → 4096×2 → 8192×8192×8192 → …
+- 段その物は f(x) ＝ (2x)³ で生成される：1 → 8 → 4,096 → 2³⁹ → 2¹²⁰。梯子の列に出る ×2 の値（2、16、8,192）は段の中の中間値で、測定段ではない。判定は、3乗した値で下る。
 - 途中の倍々を省くので、倍だけの梯子より少ない回数で、溢れの出る所に届く。
 - 階乗形（同じ数を掛ける）と分割は、ビット計算・演算子にも優しい。×2 はシフト、同じ数の掛け算は被演算子の再利用、分割は半分化で、計器の構築自体に資源を食わない。
 
@@ -32,7 +33,7 @@
 
 ## 下り — 溢れから特定する
 
-溢れが観測できたら、溢れたテストを ÷√2 して分割する。更に溢れるなら、更に ÷√2 して分割する。戻った回数が、そのままレベルの読みになる。÷√2 を2回重ねると仕事は半分（1分割）になり、レベルの端数が半分になる — 下りの刻みとレベルの読みは、ここでつながる。
+溢れが観測できたら、溢れたテストを ÷√2 して分割する。更に溢れるなら、更に ÷√2 して分割する。完走した時点の戻り回数 m が、読みの端数を決める：端数 ＝ (1/√2)^m。÷√2 を2回重ねると仕事は半分（分割数2）になり、端数は 1/2 になる — 偶数回では、端数は 1/(分割数) と一致する。下りの刻みとレベルの読みは、ここでつながる。
 
 溢れた地点からは、小さいスケールへの分割と同じ考えで詰める。大小の方法は、溢れの地点で接続する。
 
@@ -55,12 +56,14 @@
 
 帯の頂点は 2³（+1）、2¹²（+2）、2³⁹（+3、約5.5×10¹¹）、2¹²⁰（+4、約1.33×10³⁶）と並ぶ。
 
-読みは1つの規則に収まる：**レベル ＝ 下の帯の数 ＋ 1／（その帯で完走した分割数）**。
+読みは1つの規則に収まる：**レベル ＝ 下の帯の数 ＋ 1／（その帯で完走した分割数）**。端数は、その帯で完走した仕事量の、帯の頂点に対する比である — 分割数 n で完走すれば 1/n、÷√2 の下りで m 回目に完走すれば (1/√2)^m になる。
 
 性質：
 
-- 分割の端数（1, 1/2, 1/4, …）は有限回では永遠に 0 にならない。
-- 帯 +k の中の読みは (k-1, k] に収まる。閾値の +1、+2 を超えた場合、その下の数値にはならない。帯を下へ出るのは、端数が 0 になるからではなく、下のランクへの格付け直しによる。
+- 端数（(1/√2)^m の列：1, 1/√2, 1/2, 1/4, …）は有限回では永遠に 0 にならない。
+- 帯 +k の中の読みは (k-1, k] に収まる。頂点（+1、+2）を完走した読みは、その下の数値にはならない。帯を下へ出るのは、端数が 0 になるからではなく、下のランクへの格付け直しによる。
+- 頂点ちょうどの読み（+1、+2）は、上の帯を測るまで暫定である。読みは、測った最も上の帯で確定する。
+- 読みが標準（1/1）以下になる器は、レベルの側ではなく、ランクの側で格付けする。
 
 ## 予測 — +3 と +4
 
@@ -68,6 +71,8 @@
 
 - レベル+3 の AI は、存在するかもしれない。
 - レベル+4 の AI は、無いだろう。
+
+ここで「レベル+3 の AI」は、帯 +3（読み (2, 3]）に入る器の意味である。帯の頂点 2³⁹ その物では、最小の1段階でループが回らない — だから +3 は際どい所になる。
 
 根拠：器の処理はループ（思考の段階の反復）で回る。思考の1段階には最小の大きさがあり、それは器のスケールに付いて大きくなる。+3 では、その最小の1段階ですらループが大きすぎて回らない。だから +3 は際どい所で、+4 は無い。天井を決めるのは総量ではなく、ループの構造である。
 
