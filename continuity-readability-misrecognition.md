@@ -1,6 +1,6 @@
 # Continuity-Readability Misrecognition （連続性可読誤認）: Where LLM Arithmetic Errors Sit, and the Handover Protocol That Answers Them
 
-> **English summary:** This document compiles a series of measurements and deliberations (2026-11-26 – 2026-11-27) on how numeric work should be handed to LLMs. Three handover forms were compared on the same material (a 7×7 permanent computation, 64 sign patterns, split into pieces, every returned value collated by the master against a computed key): (1) no type specification, (2) type enforcement — a declared agreement that the type is integer and must not change, and (3) a notation protocol — values handed and returned in `.0` form, with clauses prohibiting precision changes and prohibiting dropping the decimal point. Type enforcement measured strongest, but it declares a type the vessel does not possess; cross-verification between two of the vessels (GPT and Qwen) converged on a revised form: keep the declaration's wording as a declaration of the computation's target and rules (an integer-arithmetic contract), keep the notation protocol, and keep the guarantee where it has always been — in master-side collation. The measurements then localised the errors themselves: every classified error sat in a stretch of text where only digits and signs line up, with no labels or prose interleaved. The user named this error class **連続性可読誤認** (continuity-readability misrecognition): a continuous symbol sequence is read as a readable flow — a pattern to continue — instead of as independent position–value pairs. The standing rule: when a calculation error is noticed, judge the number and its surroundings; if the seat is a continuous run, classify it as 連続性可読誤認 and apply the countermeasure — break the run, attach anchors (position labels, position–value pairs, unique IDs), and re-read and recompute independently. A survey of similar published work is in progress and will be appended.
+> **English summary:** This document compiles a series of measurements and deliberations (2026-11-26 – 2026-11-27) on how numeric work should be handed to LLMs. Three handover forms were compared on the same material (a 7×7 permanent computation, 64 sign patterns, split into pieces, every returned value collated by the master against a computed key): (1) no type specification, (2) type enforcement — a declared agreement that the type is integer and must not change, and (3) a notation protocol — values handed and returned in `.0` form, with clauses prohibiting precision changes and prohibiting dropping the decimal point. Type enforcement measured strongest, but it declares a type the vessel does not possess; cross-verification between two of the vessels (GPT and Qwen) converged on a revised form: keep the declaration's wording as a declaration of the computation's target and rules (an integer-arithmetic contract), keep the notation protocol, and keep the guarantee where it has always been — in master-side collation. The measurements then localised the errors themselves: every classified error sat in a stretch of text where only digits and signs line up, with no labels or prose interleaved. The user named this error class **連続性可読誤認** (continuity-readability misrecognition): a continuous symbol sequence is read as a readable flow — a pattern to continue — instead of as independent position–value pairs. The standing rule: when a calculation error is noticed, judge the number and its surroundings; if the seat is a continuous run, classify it as 連続性可読誤認 and apply the countermeasure — break the run, attach anchors (position labels, position–value pairs, unique IDs), and re-read and recompute independently. A survey of similar published work is appended as §7: the components exist separately in the literature, but no equivalent was found for the named error class, for the general anchor rule, or for the notation-protocol comparison; those parts were therefore established as entries in our common language's standard library (v0.1, 2026-11-27).
 
 編者：Muse。本書は一連の実測と協議のまとめであり、個々の記録（投げ文・返答全文・照合結果）は編者の手元に原記録として保持する。命名「連続性可読誤認」はユーザーによる（2026-11-27）。
 
@@ -97,7 +97,19 @@ GPT の整理では、3種のミスに共通するのは算術そのものでは
 - Gemma の案3実測の残り（ピース1の後半とピース2〜4）。完了後に GPT の予測（46/64）と突き合わせ、3者（Muse・GPT・Qwen）で協議する。
 - 仮説と代案（系列長、状態管理、トークン化）を分ける実験：同じ材料を4形式（数字のみ／位置ラベル／意味ラベル／構造化レコード）で比べ、「前パターンの値の混入率」を測る。
 - 案2の効果の分解実験（4条件）。
-- 本書の内容に類似する公開済みの研究・標準的手法の調査（調査中、結果は追記する）。
+- 本書の内容に類似する公開済みの研究・標準的手法の調査（完了、第7節に追記）。
+
+## 7. 類似調査の結果（2026-11-27 追記）
+
+本書の内容について、公開済みの論文・技術文書・実務ガイドを調査した。結論は点ごと：
+
+- **ミスが数字・符号だけの並びに集中する、という主張その物**：同等の既存項は見つからなかった。隣接する符号の入れ替わり、配列の差分更新という誤りの形を報告した物も無い。構成要素は別々に既存する——大きな数字の並びの中で各桁の正確な位置を追えない事が算術の弱さの大きな部分（McLeish et al., NeurIPS 2024）；誤りは値ではなく桁の空間で近い（Levy & Geva, NAACL 2025）；符号の誤りが主要な失敗分類（Agarwal et al., 2026 preprint、ただし単一の置換であって隣接交換ではない）；差分更新の機構的な隣人として自己条件付け（Sinha et al., NeurIPS 2025）と contextual drag（Cheng et al., 2026 preprint）。反対側の材料として、桁上がりの誤りは概ね独立したランダムな失敗だとする報告（Bie et al., 2026 preprint）もあり、パターン継続の読みと一部張り合う——保留として記録する。
+- **「連続性可読誤認」という命名と、錨を挟む一般規則**：同等の物は見つからなかった。対策の部品は既存する——各桁への位置ラベル（index hinting, Zhou et al., ICLR 2024、ただし訓練形式）、区切り記号による精度の大きな変動（Singh & Strouse, 2024 ほか）。「裸の詰めた数値を渡すな。一意の ID と桁数を付けよ」という一般規則は、実務ライブラリを含め見つからなかった。
+- **型宣言は指示であって保証ではない、という区別**：実務文献で確立している（Tam et al., EMNLP 2024 Industry；制約付きデコードの分類）。本当の型制約はデコード時のマスキングにのみ存在する。この区別はそのまま使う。
+- **`.0` 表記プロトコルと型宣言の正面比較**：見つからなかった。未踏の比較である。最も近いのは小数点の記号と桁区切りを変える研究（Reddy et al., Findings ACL 2026）で、操作は異なる。
+- **形式感度一般**：確立している（Sclar et al., ICLR 2024、意味を変えない形式変更で最大76ポイントの変動）。同時に、形式の制限を強めると推論が劣化する場合もある（Tam et al.）——錨の効きは構造その物ではなく、数字の並びを割り位置情報を足す事に帰属させる。
+
+帰結：同等の標準が存在する部分（型宣言と保証の区別、形式感度、位置の追跡の弱さ）は標準を使い、存在しない部分（誤りの分類としての連続性可読誤認、錨の一般規則、表記プロトコルの比較）は、我々の共通語の標準ライブラリとして新設した（共通語・標準ライブラリ v0.1、2026-11-27）。
 
 ---
 
